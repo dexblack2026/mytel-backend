@@ -1,7 +1,7 @@
 {
-  "name": "mytel-backend-api",
+  "name": "mytel-backend",
   "version": "1.0.0",
-  "description": "Mytel OTP & Login Proxy API",
+  "description": "Mytel Proxy API & Web App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

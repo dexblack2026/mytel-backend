@@ -1,12 +1,17 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware Setup
 app.use(cors());
 app.use(express.json());
+
+// Public folder ထဲက index.html နဲ့ app.js ကို Direct Serve လုပ်ပေးရန်
+app.use(express.static(path.join(__dirname, 'public')));
 
 const MYTEL_BASE_URL = "https://apis.mytel.com.mm";
 
@@ -15,11 +20,6 @@ const commonHeaders = {
   'Accept-Language': 'en',
   'Accept-Encoding': 'gzip'
 };
-
-// Health Check Endpoint
-app.get('/', (req, res) => {
-  res.json({ status: "online", message: "Mytel Proxy API is running" });
-});
 
 // 1. GET OTP (Check Account & Request OTP)
 app.get('/api/get-otp', async (req, res) => {
@@ -56,7 +56,7 @@ app.get('/api/get-otp', async (req, res) => {
   }
 });
 
-// 2. VALIDATE OTP (Validate OTP & Return Tokens)
+// 2. VALIDATE OTP & LOGIN
 app.post('/api/login', async (req, res) => {
   const { phone, otp, deviceId } = req.body;
 
@@ -98,6 +98,11 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Wildcard Route to serve index.html for UI
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Mytel Server running on port ${PORT}`);
 });

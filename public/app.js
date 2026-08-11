@@ -1,14 +1,11 @@
-// Appwrite Function URL (Appwrite Domains နေရာက Link ကို အစားထိုးပါ)
-// သို့မဟုတ် Execution Endpoint
+// Appwrite Execution Configurations
 const FUNCTION_URL = "https://sgp.cloud.appwrite.io/v1/functions/6a7adcb8003a40f95152/executions";
 const PROJECT_ID = "6a7ada870019eb567002";
 
-let timerInterval = null;
-let selectedPackageUssd = null;
-
-// 1. Request OTP
+// 1. Request OTP Function
 async function requestOtp() {
-  const phone = document.getElementById('login-phone').value.trim();
+  const phoneInput = document.getElementById('login-phone');
+  const phone = phoneInput ? phoneInput.value.trim() : '';
 
   if (!phone || phone.length < 9) {
     return showToast('❌ Phone number မှန်ကန်စွာ ဖြည့်ပါ');
@@ -24,8 +21,7 @@ async function requestOtp() {
         'x-appwrite-project': PROJECT_ID
       },
       body: JSON.stringify({
-        path: '/api/get-otp',
-        query: { phone: phone },
+        action: 'get-otp',
         phone: phone
       })
     });
@@ -33,7 +29,7 @@ async function requestOtp() {
     const data = await res.json();
     let responseBody = data;
     
-    // Appwrite Executions Response ကို ဖတ်ခြင်း
+    // Appwrite Execution Response String ဖြစ်နေပါက Parse လုပ်ခြင်း
     if (data.responseBody) {
       responseBody = typeof data.responseBody === 'string' ? JSON.parse(data.responseBody) : data.responseBody;
     }
@@ -50,10 +46,13 @@ async function requestOtp() {
   }
 }
 
-// 2. Login
+// 2. Validate OTP & Login Function
 async function handleLogin() {
-  const phone = document.getElementById('login-phone').value.trim();
-  const otp = document.getElementById('login-otp').value.trim();
+  const phoneInput = document.getElementById('login-phone');
+  const otpInput = document.getElementById('login-otp');
+
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  const otp = otpInput ? otpInput.value.trim() : '';
 
   if (!phone || !otp) {
     return showToast('❌ Phone number နှင့် OTP ဖြည့်ပါ');
@@ -69,7 +68,7 @@ async function handleLogin() {
         'x-appwrite-project': PROJECT_ID
       },
       body: JSON.stringify({
-        path: '/api/login',
+        action: 'login',
         phone: phone,
         otp: otp
       })

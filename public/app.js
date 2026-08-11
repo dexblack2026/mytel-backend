@@ -1,52 +1,64 @@
-// Appwrite Execution Configurations
-const FUNCTION_URL = "https://sgp.cloud.appwrite.io/v1/functions/6a7adcb8003a40f95152/executions";
-const PROJECT_ID = "6a7ada870019eb567002";
+// Appwrite Configuration
+// သင့် Appwrite Endpoint, Project ID နှင့် Function ID များကို စစ်ဆေးပါ
+const APPWRITE_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1';
+const PROJECT_ID = '6a7ada870019eb567002';
+const FUNCTION_ID = '6a7adcb8003a40f95152';
 
-// 1. Request OTP Function
+// Appwrite Client Initialise လုပ်ခြင်း
+const client = new Appwrite.Client()
+    .setEndpoint(APPWRITE_ENDPOINT)
+    .setProject(PROJECT_ID);
+
+const functions = new Appwrite.Functions(client);
+
+/**
+ * 1. Request OTP Function
+ * Appwrite Function သို့ action: 'get-otp' ဖြင့် Request ပို့ခြင်း
+ */
 async function requestOtp() {
   const phoneInput = document.getElementById('login-phone');
   const phone = phoneInput ? phoneInput.value.trim() : '';
 
   if (!phone || phone.length < 9) {
-    return showToast('❌ Phone number မှန်ကန်စွာ ဖြည့်ပါ');
+    return showToast('❌ Mobile number မှန်ကန်စွာ ဖြည့်သွင်းပါ');
   }
 
   showToast('⚡ Sending OTP Request...');
 
   try {
-    const res = await fetch(FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-appwrite-project': PROJECT_ID
-      },
-      body: JSON.stringify({
+    // createExecution သုံးခြင်းဖြင့် SDK က POST Method ဖြင့် သေချာ ပို့ပေးပါသည်
+    const execution = await functions.createExecution(
+      FUNCTION_ID,
+      JSON.stringify({
         action: 'get-otp',
         phone: phone
-      })
-    });
-    
-    const data = await res.json();
-    let responseBody = data;
-    
-    // Appwrite Execution Response String ဖြစ်နေပါက Parse လုပ်ခြင်း
-    if (data.responseBody) {
-      responseBody = typeof data.responseBody === 'string' ? JSON.parse(data.responseBody) : data.responseBody;
+      }),
+      false // Synchronous execution
+    );
+
+    let responseData = {};
+    if (execution.responseBody) {
+      responseData = typeof execution.responseBody === 'string' 
+        ? JSON.parse(execution.responseBody) 
+        : execution.responseBody;
     }
 
-    if (responseBody && responseBody.success) {
+    if (responseData && responseData.success) {
       showToast('✅ OTP code ပို့ပြီးပါပြီ');
       startTimer(60);
     } else {
-      showToast(`⚠️ ${responseBody?.message || 'OTP တောင်းဆိုမှု မှားယွင်းနေပါသည်။'}`);
+      showToast(`⚠️ ${responseData?.message || 'OTP တောင်းဆိုမှု မှားယွင်းနေပါသည်'}`);
     }
   } catch (err) {
-    console.error("OTP Error:", err);
+    console.error("OTP Error Details:", err);
     showToast('❌ Server Connection Error');
   }
 }
 
-// 2. Validate OTP & Login Function
+/**
+ * 2. Handle Login & Validate OTP
+ * Appwrite Function သို့ action: 'login' ဖြင့် OTP စစ်ဆေးရန် Request ပို့ခြင်း
+ */
 async function handleLogin() {
   const phoneInput = document.getElementById('login-phone');
   const otpInput = document.getElementById('login-otp');
@@ -55,35 +67,33 @@ async function handleLogin() {
   const otp = otpInput ? otpInput.value.trim() : '';
 
   if (!phone || !otp) {
-    return showToast('❌ Phone number နှင့် OTP ဖြည့်ပါ');
+    return showToast('❌ Mobile number နှင့် OTP Code နှစ်ခုလုံး ဖြည့်ပါ');
   }
 
-  showToast('⚡ Validating OTP...');
+  showToast('⚡ Validating Session...');
 
   try {
-    const res = await fetch(FUNCTION_URL, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-appwrite-project': PROJECT_ID
-      },
-      body: JSON.stringify({
+    const execution = await functions.createExecution(
+      FUNCTION_ID,
+      JSON.stringify({
         action: 'login',
         phone: phone,
         otp: otp
-      })
-    });
+      }),
+      false
+    );
 
-    const data = await res.json();
-    let result = data;
-
-    if (data.responseBody) {
-      result = typeof data.responseBody === 'string' ? JSON.parse(data.responseBody) : data.responseBody;
+    let result = {};
+    if (execution.responseBody) {
+      result = typeof execution.responseBody === 'string' 
+        ? JSON.parse(execution.responseBody) 
+        : execution.responseBody;
     }
 
     if (result && result.success && result.data && result.data.errorCode === 200) {
       const resData = result.data.result;
 
+      // Token များကို LocalStorage ထဲတွင် သိမ်းဆည်းခြင်း
       if (resData.access_token) localStorage.setItem("access_token", resData.access_token);
       if (resData.thirdPartyToken) localStorage.setItem("thirdPartyToken", resData.thirdPartyToken);
       if (resData.refresh_token) localStorage.setItem("refresh_token", resData.refresh_token);
@@ -92,10 +102,10 @@ async function handleLogin() {
       showToast('✅ Login Successful!');
       setTimeout(() => showDashboard(phone), 500);
     } else {
-      showToast(`❌ ${result?.message || 'OTP မှားယွင်းနေပါသည်။'}`);
+      showToast(`❌ ${result?.message || 'OTP မှားယွင်းနေပါသည်'}`);
     }
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("Login Error Details:", error);
     showToast('❌ Login မအောင်မြင်ပါ');
   }
 }

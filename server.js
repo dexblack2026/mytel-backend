@@ -1,108 +1,85 @@
-const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
-const path = require('path');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware Setup
-app.use(cors());
-app.use(express.json());
-
-// Public folder ထဲက index.html နဲ့ app.js ကို Direct Serve လုပ်ပေးရန်
-app.use(express.static(path.join(__dirname, 'public')));
-
-const MYTEL_BASE_URL = "https://apis.mytel.com.mm";
-
-const commonHeaders = {
-  'User-Agent': 'okhttp/4.9.1',
-  'Accept-Language': 'en',
-  'Accept-Encoding': 'gzip'
-};
-
-// 1. GET OTP (Check Account & Request OTP)
-app.get('/api/get-otp', async (req, res) => {
-  const { phone } = req.query;
-
-  if (!phone) {
-    return res.status(400).json({ success: false, message: 'Phone number is required' });
-  }
-
-  try {
-    // Step A: Check Account
-    await axios.get(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/action/check-account`, {
-      params: { phoneNumber: phone },
-      headers: commonHeaders
-    });
-
-    // Step B: Get OTP
-    const otpResponse = await axios.get(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/method/otp/get-otp`, {
-      params: { phoneNumber: phone },
-      headers: commonHeaders
-    });
-
-    return res.json({
-      success: true,
-      data: otpResponse.data
-    });
-  } catch (error) {
-    console.error("OTP Request Error:", error.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to request OTP',
-      error: error.response?.data || error.message
-    });
-  }
-});
-
-// 2. VALIDATE OTP & LOGIN
-app.post('/api/login', async (req, res) => {
-  const { phone, otp, deviceId } = req.body;
-
-  if (!phone || !otp) {
-    return res.status(400).json({ success: false, message: 'Phone number and OTP are required' });
-  }
-
-  const payload = {
-    appVersion: "1.0.96",
-    buildVersionApp: "227",
-    deviceId: deviceId || "dbf31bc085200074",
-    imei: deviceId || "dbf31bc085200074",
-    os: "ANDROID OPPO PDVM00",
-    osApp: "ANDROID",
-    password: otp,
-    phoneNumber: phone,
-    version: "11"
+module.exports = async ({ req, res, log, error }) => {
+  // CORS Headers Configuration
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Content-Type': 'application/json'
   };
 
-  try {
-    const response = await axios.post(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/method/otp/validate-otp`, payload, {
-      headers: {
-        ...commonHeaders,
-        'Content-Type': 'application/json; charset=UTF-8'
-      }
-    });
-
-    return res.json({
-      success: true,
-      data: response.data
-    });
-  } catch (error) {
-    console.error("Login Error:", error.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'OTP Validation Failed',
-      error: error.response?.data || error.message
-    });
+  // Preflight Request Options Handling
+  if (req.method === 'OPTIONS') {
+    return res.empty({ headers });
   }
-});
 
-// Wildcard Route to serve index.html for UI
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  const MYTEL_BASE_URL = "https://apis.mytel.com.mm";
+  const commonHeaders = {
+    'User-Agent': 'okhttp/4.9.1',
+    'Accept-Language': 'en',
+    'Accept-Encoding': 'gzip'
+  };
 
-app.listen(PORT, () => {
-  console.log(`🚀 Mytel Server running on port ${PORT}`);
-});
+  const path = req.path;
+
+  try {
+    // 1. GET OTP Request
+    if (path === '/api/get-otp' || req.query.action === 'get-otp') {
+      const phone = req.query.phone;
+      if (!phone) {
+        return res.json({ success: false, message: 'Phone number is required' }, 400, headers);
+      }
+
+      await axios.get(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/action/check-account`, {
+        params: { phoneNumber: phone },
+        headers: commonHeaders
+      });
+
+      const otpRes = await axios.get(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/method/otp/get-otp`, {
+        params: { phoneNumber: phone },
+        headers: commonHeaders
+      });
+
+      return res.json({ success: true, data: otpRes.data }, 200, headers);
+    }
+
+    // 2. VALIDATE OTP & LOGIN Request
+    if (path === '/api/login' || req.query.action === 'login') {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const { phone, otp, deviceId } = body;
+
+      if (!phone || !otp) {
+        return res.json({ success: false, message: 'Phone and OTP are required' }, 400, headers);
+      }
+
+      const payload = {
+        appVersion: "1.0.96",
+        buildVersionApp: "227",
+        deviceId: deviceId || "dbf31bc085200074",
+        imei: deviceId || "dbf31bc085200074",
+        os: "ANDROID OPPO PDVM00",
+        osApp: "ANDROID",
+        password: otp,
+        phoneNumber: phone,
+        version: "11"
+      };
+
+      const loginRes = await axios.post(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/method/otp/validate-otp`, payload, {
+        headers: { ...commonHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+      });
+
+      return res.json({ success: true, data: loginRes.data }, 200, headers);
+    }
+
+    return res.json({ success: false, message: 'Endpoint not found' }, 404, headers);
+
+  } catch (err) {
+    error("Error Details: " + err.message);
+    return res.json({
+      success: false,
+      message: err.message,
+      error: err.response?.data || null
+    }, 500, headers);
+  }
+};

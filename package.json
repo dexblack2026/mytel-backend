@@ -1,6 +1,7 @@
 {
   "name": "mytel-backend",
   "version": "1.0.0",
+  "description": "Mytel API Proxy for Appwrite Function",
   "main": "server.js",
   "dependencies": {
     "axios": "^1.6.0"

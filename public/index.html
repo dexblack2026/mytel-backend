@@ -1,103 +1,338 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mytel Topup & Data App</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-    body { background: #0d1117; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .container { width: 100%; max-width: 400px; padding: 20px; }
-    .card { background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d; display: none; }
-    .card.active { display: block; }
-    h2 { margin-bottom: 20px; text-align: center; color: #58a6ff; }
-    .form-group { margin-bottom: 16px; }
-    label { display: block; margin-bottom: 6px; font-size: 14px; color: #8b949e; }
-    input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 16px; }
-    .otp-group { display: flex; gap: 8px; }
-    .btn { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #238636; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .btn-secondary { background: #21262d; border: 1px solid #30363d; width: 120px; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #21262d; border: 1px solid #30363d; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 100; }
-    .toast.show { display: block; }
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; padding: 10px; background: #21262d; border: 1px solid #30363d; color: #fff; border-radius: 6px; cursor: pointer; text-align: center; }
-    .tab-btn.active { background: #1f6feb; border-color: #388bfd; }
-    .package-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-    .package-card { background: #21262d; border: 1px solid #30363d; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; }
-    .package-card.selected { border-color: #58a6ff; background: #1f6feb33; }
-    .header-user { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 14px; }
-    .mpt-theme { border-color: #f39c12; }
-    .atom-theme { border-color: #00a8ff; }
-    .ooredoo-theme { border-color: #e84118; }
-    .mytel-theme { border-color: #9c88ff; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mytel Auth Portal</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Appwrite Web SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: rgba(22, 27, 38, 0.75);
+            --neon-red: #ff0055;
+            --neon-glow: rgba(255, 0, 85, 0.4);
+            --text-color: #e0e6ed;
+            --border-color: rgba(255, 0, 85, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        body {
+            background: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 0, 85, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 210, 255, 0.08) 0%, transparent 40%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+
+        /* Toast Messages */
+        #toast-msg {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-item {
+            background: rgba(15, 20, 30, 0.95);
+            border-left: 4px solid var(--neon-red);
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 6px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out forwards;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Container Card */
+        .portal-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 35px 30px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px var(--neon-glow);
+            position: relative;
+            transition: all 0.4s ease;
+        }
+
+        .portal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .portal-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .portal-subtitle {
+            font-size: 0.9rem;
+            color: #8a99ad;
+            margin-top: 5px;
+        }
+
+        /* Input Styling */
+        .input-group-custom {
+            margin-bottom: 22px;
+            position: relative;
+        }
+
+        .input-group-custom label {
+            display: block;
+            font-size: 0.85rem;
+            color: #a0aec0;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            color: var(--neon-red);
+            font-size: 1.1rem;
+        }
+
+        .custom-input {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            background: rgba(10, 14, 23, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .custom-input:focus {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px var(--neon-glow);
+        }
+
+        /* Buttons */
+        .btn-action {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ff0055, #b8003f);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px var(--neon-glow);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 0, 85, 0.7);
+        }
+
+        .btn-send-otp {
+            position: absolute;
+            right: 6px;
+            padding: 8px 14px;
+            background: rgba(255, 0, 85, 0.2);
+            border: 1px solid var(--neon-red);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-send-otp:hover:not(:disabled) {
+            background: var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .btn-send-otp:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #555;
+        }
+
+        /* Dashboard View */
+        .d-none { display: none !important; }
+
+        .dashboard-info {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .user-badge {
+            display: inline-block;
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid #00d2ff;
+            color: #00d2ff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+        }
+
+        .btn-logout {
+            margin-top: 25px;
+            background: transparent;
+            border: 1px solid #a0aec0;
+            color: #a0aec0;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            box-shadow: none;
+        }
+    </style>
 </head>
 <body>
 
-<div class="container">
-  <!-- LOGIN PAGE -->
-  <div id="login-page" class="card active">
-    <h2>Mytel Login</h2>
-    <div class="form-group">
-      <label>Phone Number</label>
-      <input type="text" id="login-phone" placeholder="096xxxxxxxx">
-    </div>
-    <div class="form-group">
-      <label>OTP Code</label>
-      <div class="otp-group">
-        <input type="text" id="login-otp" placeholder="Enter OTP">
-        <button id="send-otp-btn" class="btn btn-secondary" onclick="requestOtp()">Send OTP</button>
-      </div>
-    </div>
-    <button class="btn" onclick="handleLogin()">Login</button>
-  </div>
+    <div id="toast-msg"></div>
 
-  <!-- DASHBOARD PAGE -->
-  <div id="dashboard-page" class="card">
-    <div class="header-user">
-      <span id="logged-user">Logged in: -</span>
-      <button onclick="handleLogout()" style="background:none; border:none; color:#f85149; cursor:pointer;">Logout</button>
-    </div>
-
-    <div class="tabs">
-      <div class="tab-btn active" onclick="switchTab('topup')">Topup</div>
-      <div class="tab-btn" onclick="switchTab('data')">Data Pack</div>
-    </div>
-
-    <!-- Topup Tab -->
-    <div id="topup-tab">
-      <div class="form-group" id="topup-phone-group">
-        <label>Phone Number (<span id="topup-op-text">-</span>)</label>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <div id="topup-logo" style="width:30px; height:30px; background:#30363d; border-radius:50%; display:flex; justify-content:center; align-items:center;">?</div>
-          <input type="text" id="phone" oninput="detectOperator('phone', 'topup-phone-group', 'topup-op-text', 'topup-logo')">
+    <!-- Login Container -->
+    <div class="portal-card" id="login-container">
+        <div class="portal-header">
+            <div class="portal-title">MYTEL PORTAL</div>
+            <div class="portal-subtitle">Secure Access Authentication</div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Card PIN</label>
-        <input type="text" id="pin" placeholder="16 digit PIN">
-      </div>
-      <button class="btn" onclick="processTopUp()">Top Up Now</button>
-    </div>
 
-    <!-- Data Tab -->
-    <div id="data-tab" style="display:none;">
-      <div class="form-group" id="data-phone-group">
-        <label>Phone Number (<span id="data-op-text">-</span>)</label>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <div id="data-logo" style="width:30px; height:30px; background:#30363d; border-radius:50%; display:flex; justify-content:center; align-items:center;">?</div>
-          <input type="text" id="data-phone" oninput="handleDataPhoneInput()">
+        <div class="input-group-custom">
+            <label for="login-phone">Mobile Number</label>
+            <div class="input-wrapper">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                <input type="text" class="custom-input" id="login-phone" placeholder="0969xxxxxxx" autocomplete="off">
+            </div>
         </div>
-      </div>
-      <label>Select Package</label>
-      <div id="package-grid" class="package-grid"></div>
-      <button class="btn" style="margin-top:20px;" onclick="processDataBuy()">Buy Package</button>
+
+        <div class="input-group-custom">
+            <label for="login-otp">OTP Code</label>
+            <div class="input-wrapper">
+                <i class="fa-solid fa-key"></i>
+                <input type="text" class="custom-input" id="login-otp" placeholder="••••••" style="padding-right: 110px;">
+                <button type="button" class="btn-send-otp" id="btn-send-otp" onclick="requestOtp()">SEND OTP</button>
+            </div>
+        </div>
+
+        <button type="button" class="btn-action" onclick="handleLogin()">AUTHENTICATE</button>
     </div>
-  </div>
-</div>
 
-<div id="status-toast" class="toast"></div>
+    <!-- Dashboard Container -->
+    <div class="portal-card d-none" id="dashboard-container">
+        <div class="portal-header">
+            <div class="portal-title" style="color: #00d2ff; text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);">ACCESS GRANTED</div>
+            <div class="portal-subtitle">Active Session Dashboard</div>
+        </div>
 
-<script src="app.js"></script>
+        <div class="dashboard-info">
+            <i class="fa-solid fa-circle-user" style="font-size: 3.5rem; color: #00d2ff; margin-bottom: 10px;"></i>
+            <br>
+            <div class="user-badge" id="user-phone-display">096xxxxxxx</div>
+        </div>
+
+        <button type="button" class="btn-action btn-logout" onclick="handleLogout()">TERMINATE SESSION</button>
+    </div>
+
+    <script>
+        function showToast(message) {
+            const container = document.getElementById('toast-msg');
+            const item = document.createElement('div');
+            item.className = 'toast-item';
+            item.innerHTML = message;
+            container.appendChild(item);
+
+            setTimeout(() => {
+                item.style.opacity = '0';
+                item.style.transition = 'all 0.4s ease';
+                setTimeout(() => item.remove(), 400);
+            }, 3500);
+        }
+
+        function startTimer(duration) {
+            const btn = document.getElementById('btn-send-otp');
+            btn.disabled = true;
+            let timer = duration;
+
+            const interval = setInterval(() => {
+                btn.innerText = `${timer}S`;
+                timer--;
+
+                if (timer < 0) {
+                    clearInterval(interval);
+                    btn.disabled = false;
+                    btn.innerText = 'SEND OTP';
+                }
+            }, 1000);
+        }
+
+        function showDashboard(phone) {
+            document.getElementById('login-container').classList.add('d-none');
+            document.getElementById('dashboard-container').classList.remove('d-none');
+            document.getElementById('user-phone-display').innerText = phone;
+        }
+
+        function handleLogout() {
+            localStorage.clear();
+            document.getElementById('dashboard-container').classList.add('d-none');
+            document.getElementById('login-container').classList.remove('d-none');
+            showToast(' Session terminated');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPhone = localStorage.getItem('user_phone');
+            if (savedPhone && localStorage.getItem('access_token')) {
+                showDashboard(savedPhone);
+            }
+        });
+    </script>
+
+    <!-- Main Backend Connectivity Script -->
+    <script src="app.js"></script>
 </body>
 </html>

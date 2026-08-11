@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mytel Topup & Data App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+    body { background: #0d1117; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 400px; padding: 20px; }
+    .card { background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d; display: none; }
+    .card.active { display: block; }
+    h2 { margin-bottom: 20px; text-align: center; color: #58a6ff; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-size: 14px; color: #8b949e; }
+    input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 16px; }
+    .otp-group { display: flex; gap: 8px; }
+    .btn { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #238636; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .btn-secondary { background: #21262d; border: 1px solid #30363d; width: 120px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #21262d; border: 1px solid #30363d; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 100; }
+    .toast.show { display: block; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 10px; background: #21262d; border: 1px solid #30363d; color: #fff; border-radius: 6px; cursor: pointer; text-align: center; }
+    .tab-btn.active { background: #1f6feb; border-color: #388bfd; }
+    .package-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .package-card { background: #21262d; border: 1px solid #30363d; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; }
+    .package-card.selected { border-color: #58a6ff; background: #1f6feb33; }
+    .header-user { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 14px; }
+    .mpt-theme { border-color: #f39c12; }
+    .atom-theme { border-color: #00a8ff; }
+    .ooredoo-theme { border-color: #e84118; }
+    .mytel-theme { border-color: #9c88ff; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- LOGIN PAGE -->
+  <div id="login-page" class="card active">
+    <h2>Mytel Login</h2>
+    <div class="form-group">
+      <label>Phone Number</label>
+      <input type="text" id="login-phone" placeholder="096xxxxxxxx">
+    </div>
+    <div class="form-group">
+      <label>OTP Code</label>
+      <div class="otp-group">
+        <input type="text" id="login-otp" placeholder="Enter OTP">
+        <button id="send-otp-btn" class="btn btn-secondary" onclick="requestOtp()">Send OTP</button>
+      </div>
+    </div>
+    <button class="btn" onclick="handleLogin()">Login</button>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div id="dashboard-page" class="card">
+    <div class="header-user">
+      <span id="logged-user">Logged in: -</span>
+      <button onclick="handleLogout()" style="background:none; border:none; color:#f85149; cursor:pointer;">Logout</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-btn active" onclick="switchTab('topup')">Topup</div>
+      <div class="tab-btn" onclick="switchTab('data')">Data Pack</div>
+    </div>
+
+    <!-- Topup Tab -->
+    <div id="topup-tab">
+      <div class="form-group" id="topup-phone-group">
+        <label>Phone Number (<span id="topup-op-text">-</span>)</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div id="topup-logo" style="width:30px; height:30px; background:#30363d; border-radius:50%; display:flex; justify-content:center; align-items:center;">?</div>
+          <input type="text" id="phone" oninput="detectOperator('phone', 'topup-phone-group', 'topup-op-text', 'topup-logo')">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Card PIN</label>
+        <input type="text" id="pin" placeholder="16 digit PIN">
+      </div>
+      <button class="btn" onclick="processTopUp()">Top Up Now</button>
+    </div>
+
+    <!-- Data Tab -->
+    <div id="data-tab" style="display:none;">
+      <div class="form-group" id="data-phone-group">
+        <label>Phone Number (<span id="data-op-text">-</span>)</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div id="data-logo" style="width:30px; height:30px; background:#30363d; border-radius:50%; display:flex; justify-content:center; align-items:center;">?</div>
+          <input type="text" id="data-phone" oninput="handleDataPhoneInput()">
+        </div>
+      </div>
+      <label>Select Package</label>
+      <div id="package-grid" class="package-grid"></div>
+      <button class="btn" style="margin-top:20px;" onclick="processDataBuy()">Buy Package</button>
+    </div>
+  </div>
+</div>
+
+<div id="status-toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

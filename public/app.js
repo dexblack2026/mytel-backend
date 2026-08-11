@@ -1,5 +1,10 @@
-// Local Server Endpoint (VPS သို့မဟုတ် Express မှ Dynamic ခေါ်ယူခြင်း)
-const BACKEND_URL = window.location.origin;
+// Appwrite Configuration & Custom Domain setup
+const APPWRITE_ENDPOINT = "https://sgp.cloud.appwrite.io/v1";
+const APPWRITE_PROJECT_ID = "6a7ada870019eb567002";
+const APPWRITE_FUNCTION_ID = "6a7adcb8003a40f95152";
+
+// Backend URL targeting Appwrite Function
+const BACKEND_URL = `${APPWRITE_ENDPOINT}/functions/${APPWRITE_FUNCTION_ID}/executions`;
 
 let timerInterval = null;
 let selectedPackageUssd = null;
@@ -43,8 +48,7 @@ function showToast(message) {
 
 function startTimer(seconds) {
   const sendBtn = document.getElementById('send-otp-btn');
-  if (!sendBtn) return;
-  
+  if (!sendBtn) return;  
   sendBtn.disabled = true;
   let timeLeft = seconds;
   clearInterval(timerInterval);
@@ -61,7 +65,7 @@ function startTimer(seconds) {
   }, 1000);
 }
 
-// 1. Request OTP Flow
+// 1. Request OTP
 async function requestOtp() {
   const phone = document.getElementById('login-phone').value.trim();
 
@@ -72,14 +76,27 @@ async function requestOtp() {
   showToast('⚡ Sending OTP Request...');
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/get-otp?phone=${encodeURIComponent(phone)}`);
+    const res = await fetch(`${BACKEND_URL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-appwrite-project': APPWRITE_PROJECT_ID
+      },
+      body: JSON.stringify({
+        path: '/api/get-otp',
+        method: 'GET',
+        query: { phone }
+      })
+    });
+    
     const data = await res.json();
+    const responseBody = typeof data.responseBody === 'string' ? JSON.parse(data.responseBody) : data.responseBody;
 
-    if (data.success) {
+    if (responseBody && responseBody.success) {
       showToast('✅ OTP code ပို့ပြီးပါပြီ');
       startTimer(60);
     } else {
-      showToast(`⚠️ ${data.message || 'OTP တောင်းဆိုမှု မှားယွင်းနေပါသည်။'}`);
+      showToast(`⚠️ ${responseBody?.message || 'OTP တောင်းဆိုမှု မှားယွင်းနေပါသည်။'}`);
     }
   } catch (err) {
     console.error("OTP Error:", err);
@@ -87,7 +104,7 @@ async function requestOtp() {
   }
 }
 
-// 2. Login Flow (Validate OTP & Save Tokens)
+// 2. Login
 async function handleLogin() {
   const phone = document.getElementById('login-phone').value.trim();
   const otp = document.getElementById('login-otp').value.trim();
@@ -99,15 +116,23 @@ async function handleLogin() {
   showToast('⚡ Validating OTP...');
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/login`, {
+    const res = await fetch(`${BACKEND_URL}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, otp })
+      headers: { 
+        "Content-Type": "application/json",
+        "x-appwrite-project": APPWRITE_PROJECT_ID
+      },
+      body: JSON.stringify({
+        path: '/api/login',
+        method: 'POST',
+        body: JSON.stringify({ phone, otp })
+      })
     });
 
-    const result = await res.json();
+    const data = await res.json();
+    const result = typeof data.responseBody === 'string' ? JSON.parse(data.responseBody) : data.responseBody;
 
-    if (result.success && result.data && result.data.errorCode === 200) {
+    if (result && result.success && result.data && result.data.errorCode === 200) {
       const resData = result.data.result;
 
       if (resData.access_token) localStorage.setItem("access_token", resData.access_token);
@@ -118,7 +143,7 @@ async function handleLogin() {
       showToast('✅ Login Successful!');
       setTimeout(() => showDashboard(phone), 500);
     } else {
-      showToast(`❌ ${result.message || 'OTP မှားယွင်းနေပါသည်။'}`);
+      showToast(`❌ ${result?.message || 'OTP မှားယွင်းနေပါသည်။'}`);
     }
   } catch (error) {
     console.error("Login Error:", error);

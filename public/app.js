@@ -1,3 +1,11 @@
+// Appwrite Function URL (Appwrite Domains နေရာက Link ကို အစားထိုးပါ)
+// သို့မဟုတ် Execution Endpoint
+const FUNCTION_URL = "https://sgp.cloud.appwrite.io/v1/functions/6a7adcb8003a40f95152/executions";
+const PROJECT_ID = "6a7ada870019eb567002";
+
+let timerInterval = null;
+let selectedPackageUssd = null;
+
 // 1. Request OTP
 async function requestOtp() {
   const phone = document.getElementById('login-phone').value.trim();
@@ -9,11 +17,11 @@ async function requestOtp() {
   showToast('⚡ Sending OTP Request...');
 
   try {
-    const res = await fetch(`${BACKEND_URL}`, {
+    const res = await fetch(FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-appwrite-project': APPWRITE_PROJECT_ID
+        'x-appwrite-project': PROJECT_ID
       },
       body: JSON.stringify({
         path: '/api/get-otp',
@@ -25,7 +33,7 @@ async function requestOtp() {
     const data = await res.json();
     let responseBody = data;
     
-    // Parse Appwrite Function Execution Response
+    // Appwrite Executions Response ကို ဖတ်ခြင်း
     if (data.responseBody) {
       responseBody = typeof data.responseBody === 'string' ? JSON.parse(data.responseBody) : data.responseBody;
     }
@@ -54,11 +62,11 @@ async function handleLogin() {
   showToast('⚡ Validating OTP...');
 
   try {
-    const res = await fetch(`${BACKEND_URL}`, {
-      method: "POST",
+    const res = await fetch(FUNCTION_URL, {
+      method: 'POST',
       headers: { 
-        "Content-Type": "application/json",
-        "x-appwrite-project": APPWRITE_PROJECT_ID
+        'Content-Type': 'application/json',
+        'x-appwrite-project': PROJECT_ID
       },
       body: JSON.stringify({
         path: '/api/login',

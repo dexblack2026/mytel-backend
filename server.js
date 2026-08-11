@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  // CORS Headers Configuration
+  // CORS Headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': '*',

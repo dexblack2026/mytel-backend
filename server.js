@@ -1,7 +1,6 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
-  // CORS Headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': '*',
@@ -9,7 +8,6 @@ module.exports = async ({ req, res, log, error }) => {
     'Content-Type': 'application/json'
   };
 
-  // Preflight Request Options Handling
   if (req.method === 'OPTIONS') {
     return res.empty({ headers });
   }
@@ -21,12 +19,24 @@ module.exports = async ({ req, res, log, error }) => {
     'Accept-Encoding': 'gzip'
   };
 
-  const path = req.path;
+  // Body Parsing (Appwrite Direct Executions or Custom Body)
+  let body = {};
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  } catch (e) {
+    body = {};
+  }
+
+  // Determine Path & Query Parameters
+  const path = body.path || req.path || req.headers['x-appwrite-trigger-path'] || '/';
+  const query = body.query || req.query || {};
+
+  log(`Execution Path: ${path}`);
 
   try {
-    // 1. GET OTP Request
-    if (path === '/api/get-otp' || req.query.action === 'get-otp') {
-      const phone = req.query.phone;
+    // 1. GET OTP
+    if (path === '/api/get-otp' || query.action === 'get-otp') {
+      const phone = query.phone || body.phone;
       if (!phone) {
         return res.json({ success: false, message: 'Phone number is required' }, 400, headers);
       }
@@ -44,10 +54,11 @@ module.exports = async ({ req, res, log, error }) => {
       return res.json({ success: true, data: otpRes.data }, 200, headers);
     }
 
-    // 2. VALIDATE OTP & LOGIN Request
-    if (path === '/api/login' || req.query.action === 'login') {
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { phone, otp, deviceId } = body;
+    // 2. VALIDATE OTP & LOGIN
+    if (path === '/api/login' || query.action === 'login') {
+      const phone = body.phone || query.phone;
+      const otp = body.otp || query.otp;
+      const deviceId = body.deviceId || "dbf31bc085200074";
 
       if (!phone || !otp) {
         return res.json({ success: false, message: 'Phone and OTP are required' }, 400, headers);
@@ -56,8 +67,8 @@ module.exports = async ({ req, res, log, error }) => {
       const payload = {
         appVersion: "1.0.96",
         buildVersionApp: "227",
-        deviceId: deviceId || "dbf31bc085200074",
-        imei: deviceId || "dbf31bc085200074",
+        deviceId: deviceId,
+        imei: deviceId,
         os: "ANDROID OPPO PDVM00",
         osApp: "ANDROID",
         password: otp,
@@ -72,7 +83,11 @@ module.exports = async ({ req, res, log, error }) => {
       return res.json({ success: true, data: loginRes.data }, 200, headers);
     }
 
-    return res.json({ success: false, message: 'Endpoint not found' }, 404, headers);
+    // Default Fallback Response
+    return res.json({
+      success: false,
+      message: `Route not found for path: ${path}`
+    }, 404, headers);
 
   } catch (err) {
     error("Error Details: " + err.message);

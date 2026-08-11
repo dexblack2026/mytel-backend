@@ -1,6 +1,7 @@
 const axios = require('axios');
 
 module.exports = async ({ req, res, log, error }) => {
+  // CORS Headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': '*',
@@ -8,6 +9,7 @@ module.exports = async ({ req, res, log, error }) => {
     'Content-Type': 'application/json'
   };
 
+  // Preflight Request Handle လုပ်ခြင်း
   if (req.method === 'OPTIONS') {
     return res.empty({ headers });
   }
@@ -19,7 +21,7 @@ module.exports = async ({ req, res, log, error }) => {
     'Accept-Encoding': 'gzip'
   };
 
-  // Body Parsing (Appwrite Direct Executions or Custom Body)
+  // Request Body ကို Parse လုပ်ခြင်း
   let body = {};
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
@@ -27,25 +29,28 @@ module.exports = async ({ req, res, log, error }) => {
     body = {};
   }
 
-  // Determine Path & Query Parameters
-  const path = body.path || req.path || req.headers['x-appwrite-trigger-path'] || '/';
-  const query = body.query || req.query || {};
+  // Appwrite Function သို့ ပို့လိုက်သော Action / Path / Query များကို ရယူခြင်း
+  const action = body.action || req.query?.action || body.path || req.path;
+  const phone = body.phone || req.query?.phone;
+  const otp = body.otp || req.query?.otp;
 
-  log(`Execution Path: ${path}`);
+  log(`Action Triggered: ${action}`);
+  log(`Request Method: ${req.method}`);
 
   try {
-    // 1. GET OTP
-    if (path === '/api/get-otp' || query.action === 'get-otp') {
-      const phone = query.phone || body.phone;
+    // 1. GET OTP (action/path ကို စစ်ဆေးခြင်း)
+    if (action === 'get-otp' || action === '/api/get-otp') {
       if (!phone) {
         return res.json({ success: false, message: 'Phone number is required' }, 400, headers);
       }
 
+      // Check Account
       await axios.get(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/action/check-account`, {
         params: { phoneNumber: phone },
         headers: commonHeaders
       });
 
+      // Send OTP
       const otpRes = await axios.get(`${MYTEL_BASE_URL}/myid/authen/v1.0/login/method/otp/get-otp`, {
         params: { phoneNumber: phone },
         headers: commonHeaders
@@ -54,10 +59,8 @@ module.exports = async ({ req, res, log, error }) => {
       return res.json({ success: true, data: otpRes.data }, 200, headers);
     }
 
-    // 2. VALIDATE OTP & LOGIN
-    if (path === '/api/login' || query.action === 'login') {
-      const phone = body.phone || query.phone;
-      const otp = body.otp || query.otp;
+    // 2. VALIDATE OTP / LOGIN
+    if (action === 'login' || action === '/api/login') {
       const deviceId = body.deviceId || "dbf31bc085200074";
 
       if (!phone || !otp) {
@@ -83,14 +86,15 @@ module.exports = async ({ req, res, log, error }) => {
       return res.json({ success: true, data: loginRes.data }, 200, headers);
     }
 
-    // Default Fallback Response
+    // Default Fallback Response (404 မပြန်ဘဲ 200 နဲ့ Error Message ပြန်ပေးမည်)
     return res.json({
       success: false,
-      message: `Route not found for path: ${path}`
-    }, 404, headers);
+      message: `Invalid action or route: ${action}`,
+      receivedData: { action, phone }
+    }, 200, headers);
 
   } catch (err) {
-    error("Error Details: " + err.message);
+    error("Server Error Details: " + err.message);
     return res.json({
       success: false,
       message: err.message,
